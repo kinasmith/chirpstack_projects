@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "Cubecell_Viasala_WeatherStation"
+		},
+		{
+			"path": "CubeCell_PIO_Tester"
+		},
+		{
+			"path": "RS_weatherStation"
+		}
+	],
+	"settings": {}
+}

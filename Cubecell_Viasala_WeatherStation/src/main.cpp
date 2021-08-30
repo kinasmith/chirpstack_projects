@@ -1,6 +1,9 @@
 #include <Arduino.h>
 #include "LoRaWan_APP.h"
+// #include "HT_SH1107Wire.h"
 #include "Wire.h"
+
+// SH1107Wire  oled(0x3c, 500000, SDA, SCL ,GEOMETRY_128_64,GPIO10); // addr, freq, sda, scl, resolution, rst
 
 #define MAX_DATA_SIZE 42
 #define MEAS_ARRAY_SIZE 23
@@ -28,7 +31,7 @@ uint32_t devAddr =  ( uint32_t )0x007e6ae1;
 uint16_t userChannelsMask[6]={ 0xFF00,0x0000,0x0000,0x0000,0x0000,0x0000 };
 LoRaMacRegion_t loraWanRegion = ACTIVE_REGION;
 DeviceClass_t  loraWanClass = LORAWAN_CLASS;
-uint32_t appTxDutyCycle = 60000;
+uint32_t appTxDutyCycle = 60000 * 5;
 bool overTheAirActivation = LORAWAN_NETMODE;
 bool loraWanAdr = LORAWAN_ADR;
 bool keepNet = LORAWAN_NET_RESERVE;
@@ -43,7 +46,7 @@ String input = "";
 String meas[MEAS_ARRAY_SIZE];
 int measINT[MEAS_ARRAY_SIZE];
 float measFLOAT[MEAS_ARRAY_SIZE];
-static uint8_t data[MAX_DATA_SIZE];
+// static uint8_t data[MAX_DATA_SIZE];
 
 void printHex2(unsigned v) {
   v &= 0xff;
@@ -55,40 +58,82 @@ void printHex2(unsigned v) {
 static void prepareTxFrame( uint8_t port )
 {
   Serial.println("Checking the Weather");
-  listenForWeather();
+  // listenForWeather();
   Serial.println("data Collected, Attempting to Send");
+  appDataSize = MAX_DATA_SIZE;
 
-  appDataSize = 10;
-  unsigned char *puc;
-  puc = (unsigned char *)(&t);
-  appData[0] = puc[0];
-  appData[1] = puc[1];
-  appData[2] = puc[2];
-  appData[3] = puc[3];
-  puc = (unsigned char *)(&h);
-  appData[4] = puc[0];
-  appData[5] = puc[1];
-  appData[6] = puc[2];
-  appData[7] = puc[3];
+  Serial1.println("0R0"); //request measurements
+  delay(40);
+    //Parse Measurements
+  if(Serial1.available()) {
+    input = Serial1.readStringUntil('\n'); //pulls whole string into variable
+    for(int i = 0; i < MEAS_ARRAY_SIZE; i++) //splits the string at the comma into an array of strings
+      meas[i] = split(input, ',',i);
+    if(meas[0]=="0R0") { //check for correct return
+      for(int i = 0; i < MEAS_ARRAY_SIZE; i++) {     //trims non-number values off each return
+        meas[i].remove(0,3); //remove first three values
+        meas[i].remove(meas[i].length()-1,1); //remove the last value
+      }
+      for(int i = 0; i < MEAS_ARRAY_SIZE-3; i++) {//converts values to floats, also trims first and last values from String Array, which hold junk values
+        measFLOAT[i] = meas[i+1].toFloat();
+        // Serial.print(i);
+        // Serial.print(", ");
+        // Serial.println(measFLOAT[i]);
+      }
+      //scale temperatures to avoid negative values
+      measFLOAT[6] += 50; //air temp
+      measFLOAT[7] += 50; //air temp internal
+      measFLOAT[9] /= 10; //air pressure (div by 10, or it will roll over when upscaled to an INT)
+      measFLOAT[18] += 50;  //heating temp
+      measFLOAT[20] = getBatteryVoltage(); //battery voltage
+      measFLOAT[20] /= 1000; //battery voltage (scale for CubeCell)
 
-  appData[8] = (uint8_t)(b >> 8);
-  appData[9] = (uint8_t)b;
+      for(int i = 0; i < DATA_ARRAY_SIZE; i++) {//print scaled values as a check
+        Serial.print(i);
+        Serial.print(", ");
+        Serial.println(measFLOAT[i]);
+      }
+      //converts floats into char pairs
+      for(int i = 0; i < DATA_ARRAY_SIZE; i++) {
+        measINT[i] = measFLOAT[i] * 100; //upscale data and convert floats to ints
+        appData[i*2] = measINT[i] >> 8;
+        appData[(i*2)+1] = measINT[i];
+      }
+    }
+  }
 }
 
 void setup()
 {
   boardInitMcu();
+  // oled.init();
+  // oled.screenRotate(ANGLE_180_DEGREE);
+  // oled.clear();
+  // oled.setFont(ArialMT_Plain_10);
+  // oled.setTextAlignment(TEXT_ALIGN_LEFT);
+  // oled.setFont(ArialMT_Plain_10);
+  // oled.drawString(0, 0, "Hello world");
+  // oled.setFont(ArialMT_Plain_16);
+  // oled.drawString(0, 10, "Hello world");
+  // oled.setFont(ArialMT_Plain_24);
+  // oled.drawString(0, 26, "Hello world");
+  // oled.display();
+  // delay(5000);
+  // oled.clear();
   Serial.begin(115200);
   Serial1.begin(9600);
-  while(1) {
-    Serial1.println("hello");
-    delay(10);
-  }
+  // while(1) {
+  //   listenForWeather();
+  //   // Serial1.println("hello");
+  //   delay(1000);
+  // }
 #if(AT_SUPPORT)
   enableAt();
 #endif
+  LoRaWAN.displayMcuInit(); // 	display.screenRotate(ANGLE_180_DEGREE);
   deviceState = DEVICE_STATE_INIT;
   LoRaWAN.ifskipjoin();
+  appDataSize = MAX_DATA_SIZE;
 }
 
 void loop()
@@ -127,6 +172,7 @@ void loop()
     }
     case DEVICE_STATE_SLEEP:
     {
+      LoRaWAN.displayAck();
       LoRaWAN.sleep();
       break;
     }
@@ -213,8 +259,9 @@ void listenForWeather() {
       measFLOAT[7] += 50; //air temp internal
       measFLOAT[9] /= 10; //air pressure (div by 10, or it will roll over when upscaled to an INT)
       measFLOAT[18] += 50;  //heating temp
-
       measFLOAT[20] = getBatteryVoltage(); //battery voltage
+      measFLOAT[20] /= 1000; //battery voltage (scale for CubeCell)
+
       for(int i = 0; i < DATA_ARRAY_SIZE; i++) {//print scaled values as a check
         Serial.print(i);
         Serial.print(", ");
@@ -223,8 +270,8 @@ void listenForWeather() {
       //converts floats into char pairs
       for(int i = 0; i < DATA_ARRAY_SIZE; i++) {
         measINT[i] = measFLOAT[i] * 100; //upscale data and convert floats to ints
-        data[i*2] = measINT[i] >> 8;
-        data[(i*2)+1] = measINT[i];
+        appData[i*2] = measINT[i] >> 8;
+        appData[(i*2)+1] = measINT[i];
       }
     }
   }
