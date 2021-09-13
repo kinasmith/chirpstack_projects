@@ -8,9 +8,7 @@
 
 
 static void prepareTxFrame( uint8_t ) ;
-void printHex2(unsigned);
 void setupSensor();
-void listenForWeather();
 String split(String, char, int);
 
 /* OTAA para*/
@@ -43,19 +41,10 @@ String input = "";
 String meas[MEAS_ARRAY_SIZE];
 int measINT[MEAS_ARRAY_SIZE];
 float measFLOAT[MEAS_ARRAY_SIZE];
-// static uint8_t data[MAX_DATA_SIZE];
-
-void printHex2(unsigned v) {
-  v &= 0xff;
-  if (v < 16)
-      Serial.print('0');
-  Serial.print(v, HEX);
-}
 
 static void prepareTxFrame( uint8_t port )
 {
   Serial.println("Checking the Weather");
-  // listenForWeather();
   Serial.println("data Collected, Attempting to Send");
   appDataSize = MAX_DATA_SIZE;
 
@@ -93,7 +82,7 @@ static void prepareTxFrame( uint8_t port )
       //converts floats into char pairs
       for(int i = 0; i < DATA_ARRAY_SIZE; i++) {
         measINT[i] = measFLOAT[i] * 100; //upscale data and convert floats to ints
-        appData[i*2] = measINT[i] >> 8;
+        appData[i*2] = measINT[i] >> 8;  //bit shift into array
         appData[(i*2)+1] = measINT[i];
       }
     }
@@ -162,101 +151,8 @@ void loop()
   }
 }
 
-void listenForWeather() {
-  /**
-   *    0R0,Dn=209D,Dm=281D,Dx=035D,Sn=0.0M,Sm=0.1M,Sx=0.3M,Ta=19.7C,Tp=20.0C,Ua=31.0P,Pa=837.3H,Rc=0.00M,Rd=0s,Ri=0.0M,Hc=0.0M,Hd=0s,Hi=0.0M,Rp=0.0M,Hp=0.0M,Th=19.2C,Vr=3.542V,Id=Hel
-   * 
-   * 0R0,
-   * Dn=209D,
-   * Dm=281D,
-   * Dx=035D,
-   * Sn=0.0M,
-   * Sm=0.1M,
-   * Sx=0.3M,
-   * Ta=19.7C,
-   * Tp=20.0C,
-   * Ua=31.0P,
-   * Pa=837.3H,
-   * Rc=0.00M,
-   * Rd=0s,
-   * Ri=0.0M,
-   * Hc=0.0M,
-   * Hd=0s,
-   * Hi=0.0M,
-   * Rp=0.0M,
-   * Hp=0.0M,
-   * Th=19.2C,
-   * Vr=3.542V,
-   * Id=Hel
-   */
-
-  /*
-0, 106.00   DIR_MIN
-1, 278.00   DIR_AVG
-2, 27.00    DIR_MAX
-3, 0.10     SPD_LUL
-4, 0.10     SPD_AVG
-5, 0.20     SPD_GST
-6, 19.70    AIR_TEM
-7, 19.90    AIR_INT
-8, 32.00    AIR_HUM
-9, 837.30   AIR_PRS
-10, 0.00    RAI_AMT
-11, 0.00    RAI_DUR
-12, 0.00    RAI_INT
-13, 0.00    HAI_AMT
-14, 0.00    HAI_DUR
-15, 0.00    HAI_INT
-16, 0.00    RAI_PEK
-17, 0.00    HAI_PEK
-18, 19.00   HEA_TEM
-19, 3.54    REF_VOL
-20, x.xx    BAT_VOL
-*/
-
-  Serial1.println("0R0"); //request measurements
-  delay(40);
-    //Parse Measurements
-  if(Serial1.available()) {
-    input = Serial1.readStringUntil('\n'); //pulls whole string into variable
-    for(int i = 0; i < MEAS_ARRAY_SIZE; i++) //splits the string at the comma into an array of strings
-      meas[i] = split(input, ',',i);
-    if(meas[0]=="0R0") { //check for correct return
-      for(int i = 0; i < MEAS_ARRAY_SIZE; i++) {     //trims non-number values off each return
-        meas[i].remove(0,3); //remove first three values
-        meas[i].remove(meas[i].length()-1,1); //remove the last value
-      }
-      for(int i = 0; i < MEAS_ARRAY_SIZE-3; i++) {//converts values to floats, also trims first and last values from String Array, which hold junk values
-        measFLOAT[i] = meas[i+1].toFloat();
-        // Serial.print(i);
-        // Serial.print(", ");
-        // Serial.println(measFLOAT[i]);
-      }
-      //scale temperatures to avoid negative values
-      measFLOAT[6] += 50; //air temp
-      measFLOAT[7] += 50; //air temp internal
-      measFLOAT[9] /= 10; //air pressure (div by 10, or it will roll over when upscaled to an INT)
-      measFLOAT[18] += 50;  //heating temp
-      measFLOAT[20] = getBatteryVoltage(); //battery voltage
-      measFLOAT[20] /= 1000; //battery voltage (scale for CubeCell)
-
-      for(int i = 0; i < DATA_ARRAY_SIZE; i++) {//print scaled values as a check
-        Serial.print(i);
-        Serial.print(", ");
-        Serial.println(measFLOAT[i]);
-      }
-      //converts floats into char pairs
-      for(int i = 0; i < DATA_ARRAY_SIZE; i++) {
-        measINT[i] = measFLOAT[i] * 100; //upscale data and convert floats to ints
-        appData[i*2] = measINT[i] >> 8;
-        appData[(i*2)+1] = measINT[i];
-      }
-    }
-  }
-}
-
-
-String split(String data, char separator, int index) {
+String split(String data, char separator, int index) 
+{
   int found = 0;
   int strIndex[] = {0, -1};
   int maxIndex = data.length()-1;
@@ -270,7 +166,8 @@ String split(String data, char separator, int index) {
   return found>index ? data.substring(strIndex[0], strIndex[1]) : "";
 }
 
-void setupSensor() {
+void setupSensor() 
+{
   //Sets weather station config
   //See manual for details.
   //This is the response string.
