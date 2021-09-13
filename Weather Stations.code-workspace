@@ -8,6 +8,13 @@
 		},
 		{
 			"path": "RS_weatherStation"
+		},
+		{
+			"path": "cubecell_AB01_Si7021"
+		},
+		{
+			"name": "AB01_si7021_RHT",
+			"path": "AB01_si7021_RHT"
 		}
 	],
 	"settings": {}
