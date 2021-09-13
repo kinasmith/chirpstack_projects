@@ -51,41 +51,59 @@ static void prepareTxFrame( uint8_t port )
   Serial1.println("0R0"); //request measurements
   delay(40);
     //Parse Measurements
+    /**
+     * 
+     * 0R0,
+     * Dn=29D, Wind Direction Min
+     * Dm=312D, Wind Direction Avg
+     * Dx=323D, Wind Direction Max
+     * Sn=0.3M, Wind Speed Min
+     * Sm=0.4M, Wind Speed Avg
+     * Sx=0.4M, Wind Speed Max
+     * Ta=9.0C, Air Temperature 
+     * Tp=9.1C, Internal Temperature
+     * Ua=88.6P, Air Humidity
+     * Pa=1006.9H, Air Pressure
+     * Rc=0.00M, Rain Amount
+     * Rd=0s, Rain Duration
+     * Ri=0.0M, Rain Intensity
+     * Hc=0.0M, Hail Amount
+     * Hd=0s, Hail Duration
+     * Hi=0.0M, Hail Intensity
+     * Rp=0.0M, Rain Peak Intensity
+     * Hp=0.0M, Hail Peak Intensity
+     * Vs=12.1V, Supply Voltage
+     * Vr=3.534V Reference Voltage
+     * 
+     */ 
+
   if(Serial1.available()) {
     input = Serial1.readStringUntil('\n'); //pulls whole string into variable
     for(int i = 0; i < MEAS_ARRAY_SIZE; i++) //splits the string at the comma into an array of strings
       meas[i] = split(input, ',',i);
-    if(meas[0]=="0R0") { //check for correct return
-      for(int i = 0; i < MEAS_ARRAY_SIZE; i++) {     //trims non-number values off each return
-        meas[i].remove(0,3); //remove first three values
-        meas[i].remove(meas[i].length()-1,1); //remove the last value
+//    if(meas[0]=="0R0") { //check for correct return
+      for(int i = 0; i < MEAS_ARRAY_SIZE; i++) { //cycles through array
+        meas[i].remove(0,3); //remove first three characters, which are measurement types eg. "Ua=" of 'Ua=88.6P"
+        meas[i].remove(meas[i].length()-1,1); //removes the last character which is the Unit eg. "P" of 'Ua=88.6P'
       }
-      for(int i = 0; i < MEAS_ARRAY_SIZE-3; i++) {//converts values to floats, also trims first and last values from String Array, which hold junk values
-        measFLOAT[i] = meas[i+1].toFloat();
-        // Serial.print(i);
-        // Serial.print(", ");
-        // Serial.println(measFLOAT[i]);
+      for(int i = 0; i < MEAS_ARRAY_SIZE-2; i++) { 
+        measFLOAT[i] = meas[i+1].toFloat(); //removes first value of array ("0R0")
       }
       //scale temperatures to avoid negative values
       measFLOAT[6] += 50; //air temp
       measFLOAT[7] += 50; //air temp internal
       measFLOAT[9] /= 10; //air pressure (div by 10, or it will roll over when upscaled to an INT)
-      measFLOAT[18] += 50;  //heating temp
+      measFLOAT[18] += 50;  //Supply Voltage
       measFLOAT[20] = getBatteryVoltage(); //battery voltage
       measFLOAT[20] /= 1000; //battery voltage (scale for CubeCell)
 
-      for(int i = 0; i < DATA_ARRAY_SIZE; i++) {//print scaled values as a check
-        Serial.print(i);
-        Serial.print(", ");
-        Serial.println(measFLOAT[i]);
-      }
       //converts floats into char pairs
       for(int i = 0; i < DATA_ARRAY_SIZE; i++) {
         measINT[i] = measFLOAT[i] * 100; //upscale data and convert floats to ints
         appData[i*2] = measINT[i] >> 8;  //bit shift into array
         appData[(i*2)+1] = measINT[i];
       }
-    }
+  //  }
   }
 }
 
@@ -101,6 +119,7 @@ void setup()
   deviceState = DEVICE_STATE_INIT;
   LoRaWAN.ifskipjoin();
   appDataSize = MAX_DATA_SIZE;
+  setupSensor();
 }
 
 void loop()
@@ -168,12 +187,13 @@ String split(String data, char separator, int index)
 
 void setupSensor() 
 {
+  Serial.println("setup sensor");
+  
+  int d = 100;
   //Sets weather station config
   //See manual for details.
   //This is the response string.
-  
-  //0R0,Dn=270D,Dm=302D,Dx=339D,Sn=0.1M,Sm=0.1M,Sx=0.2M,Ta=19.1C,Tp=19.4C,Ua=31.0P,Pa=837.5H,Rc=0.00M,Rd=0s,Ri=0.0M,Hc=0.0M,Hd=0s,Hi=0.0M,Rp=0.0M,Hp=0.0M,Th=18.8C,Vr=3.533V,Id=Hel␍␊
-  delay(100);
+  // 0R0,Dn=29D,Dm=312D,Dx=323D,Sn=0.3M,Sm=0.4M,Sx=0.4M,Ta=9.0C,Tp=9.1C,Ua=88.6P,Pa=1006.9H,Rc=0.00M,Rd=0s,Ri=0.0M,Hc=0.0M,Hd=0s,Hi=0.0M,Rp=0.0M,Hp=0.0M,Vs=12.1V,Vr=3.534V
 
   /**
    * R: Parameter Selection
@@ -191,68 +211,81 @@ void setupSensor()
   // N: Formatter (W, Wind Speed and Angle)
   // F: Samping Frequency (Hz)
   Serial1.println("0WU,R=&11111100");
-  delay(100);
-  if(Serial1.available()) { input = Serial1.readStringUntil('\n'); }
-  Serial1.println(input);
+  delay(d);
   Serial1.println("0WU,I=120,A=120,G=3,U=M,D=0");
-  delay(100);
-  Serial1.println(input);
+  delay(d);
   Serial1.println("0WU,N=W,F=2");
-  delay(100);
-
+  delay(d);
+  
   //Set Pressure/Temperature/Humidity Settings
   // I: Update Interval
   // P: Pressure Unit (H, hPa)
   // T: Temperature Unit (C, Celcius)
-  if(Serial1.available()) { input = Serial1.readStringUntil('\n'); }
-  Serial1.println(input);
   Serial1.println("0TU,R=&11110000");
-  delay(100);
-  if(Serial1.available()) { input = Serial1.readStringUntil('\n'); }
-  Serial1.println(input);
+  delay(d);
   Serial1.println("0TU,I=120,P=H,T=C");
-  delay(100);
-
+  delay(d);
+  
   //Set Rain/Hail Settings
   // I: Update Interval
   // U: Unit (M, Metric (accumulated rainfall in mm, Rain duration in s, Rain intensity in mm/h))
   // S: Hail Units (M, Metric (accumulated hailfall in hits/cm2, Hail event duration in s, Hail intensity in hits/cm2h))
   // M: AutoSend Mode, (T, Time Based (Sends Precip Message At Interval, I))
   // Z: Counter Reset, (A, Auto; M, Manual; L, Overflow; Y, Immediate)
-  if(Serial1.available()) { input = Serial1.readStringUntil('\n'); }
-  Serial1.println(input);
   Serial1.println("0RU,R=&11111111");
-  delay(100);
-  if(Serial1.available()) { input = Serial1.readStringUntil('\n'); }
-  Serial1.println(input);
+  delay(d);
   Serial1.println("0RU,I=120,U=M,S=M,M=T");
-  delay(100);
-  if(Serial1.available()) { input = Serial1.readStringUntil('\n'); }
-  Serial1.println(input);
+  delay(d);
   Serial1.println("0RU,Z=L,X=65535,Y=65535");
-  delay(100);
-
+  delay(d);
+  
   //Set System Settings
   // I: Update Interval
   // S: Error Messaging (N, No)
   // H: Heating Control (N, No)
-  if(Serial1.available()) { input = Serial1.readStringUntil('\n'); }
-  Serial1.println(input);
   Serial1.println("0SU,R=&00110000");
-  delay(100);
-  if(Serial1.available()) { input = Serial1.readStringUntil('\n'); }
-  Serial1.println(input);
+  delay(d);
   Serial1.println("0SU,I=120,S=N,H=N");
-  delay(100);
-  if(Serial1.available()) { input = Serial1.readStringUntil('\n'); }
-  Serial1.println(input);
-  Serial1.flush();
-
+  delay(d);
+  Serial.flush();
+  
   // Check response to full message
+  /**
+   * Example Response:
+   * 0R0,Dn=29D,Dm=312D,Dx=323D,Sn=0.3M,Sm=0.4M,Sx=0.4M,Ta=9.0C,Tp=9.1C,Ua=88.6P,Pa=1006.9H,Rc=0.00M,Rd=0s,Ri=0.0M,Hc=0.0M,Hd=0s,Hi=0.0M,Rp=0.0M,Hp=0.0M,Vs=12.1V,Vr=3.534V
+   */
+  Serial1.println("0R0");
+  delay(400);
   Serial1.println("0R0");
   delay(40);
   if(Serial1.available()) {
-    input = Serial1.readStringUntil('\n');
-  }
-  Serial1.println(input);
+    input = Serial1.readStringUntil('\n'); //pulls whole string into variable
+    Serial.println(input);
+    for(int i = 0; i < MEAS_ARRAY_SIZE; i++) //splits the string at the comma into an array of strings
+      meas[i] = split(input, ',',i);
+//    if(meas[0]=="0R0") { //check for correct return
+      for(int i = 0; i < MEAS_ARRAY_SIZE; i++) { //cycles through array
+        meas[i].remove(0,3); //remove first three characters, which are measurement types eg. "Ua=" of 'Ua=88.6P"
+        meas[i].remove(meas[i].length()-1,1); //removes the last character which is the Unit eg. "P" of 'Ua=88.6P'
+      }
+      for(int i = 0; i < MEAS_ARRAY_SIZE-2; i++) { 
+        measFLOAT[i] = meas[i+1].toFloat(); //removes first value of array ("0R0")
+        Serial.print(i);
+        Serial.print(", ");
+        Serial.println(measFLOAT[i]);
+      }
+      measFLOAT[6] += 50; //air temp
+      measFLOAT[7] += 50; //air temp internal
+      measFLOAT[9] /= 10; //air pressure (div by 10, or it will roll over when upscaled to an INT)
+      measFLOAT[18] += 50;  //Supply Voltage
+      measFLOAT[20] = getBatteryVoltage(); //battery voltage
+      measFLOAT[20] /= 1000; //battery voltage (scale for CubeCell)
+      for(int i = 0; i < DATA_ARRAY_SIZE; i++) {//print scaled values as a check
+        Serial.print(i);
+        Serial.print(", ");
+        Serial.println(measFLOAT[i]);
+      }
+    }
+//  }
+  Serial.flush();
 }
