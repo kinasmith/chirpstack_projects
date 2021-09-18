@@ -2,10 +2,13 @@
 #include "LoRaWan_APP.h"
 #include "Wire.h"
 
-#define MAX_DATA_SIZE 42
-#define MEAS_ARRAY_SIZE 23
-#define DATA_ARRAY_SIZE 21
+// #define MAX_DATA_SIZE 42
+// #define MEAS_ARRAY_SIZE 23
+// #define DATA_ARRAY_SIZE 21
 
+#define MAX_DATA_SIZE 20
+#define MEAS_ARRAY_SIZE 12
+#define DATA_ARRAY_SIZE 10
 
 static void prepareTxFrame( uint8_t ) ;
 void setupSensor();
@@ -26,7 +29,7 @@ uint32_t devAddr =  ( uint32_t )0x007e6ae1;
 uint16_t userChannelsMask[6]={ 0xFF00,0x0000,0x0000,0x0000,0x0000,0x0000 };
 LoRaMacRegion_t loraWanRegion = ACTIVE_REGION;
 DeviceClass_t  loraWanClass = LORAWAN_CLASS;
-uint32_t appTxDutyCycle = 60000 * 2;
+uint32_t appTxDutyCycle = 60000 * 5;
 bool overTheAirActivation = LORAWAN_NETMODE;
 bool loraWanAdr = LORAWAN_ADR;
 bool keepNet = LORAWAN_NET_RESERVE;
@@ -75,35 +78,64 @@ static void prepareTxFrame( uint8_t port )
      * Vs=12.1V, Supply Voltage
      * Vr=3.534V Reference Voltage
      * 
+     * 0R0,Dm=312D,Sm=0.4M,Ta=9.0C,Ua=88.6P,Pa=1006.9H,Rc=0.00M,Rd=0s,Ri=0.0M,Vs=12.1V
      */ 
-
+/*
   if(Serial1.available()) {
     input = Serial1.readStringUntil('\n'); //pulls whole string into variable
     for(int i = 0; i < MEAS_ARRAY_SIZE; i++) //splits the string at the comma into an array of strings
       meas[i] = split(input, ',',i);
-//    if(meas[0]=="0R0") { //check for correct return
-      for(int i = 0; i < MEAS_ARRAY_SIZE; i++) { //cycles through array
-        meas[i].remove(0,3); //remove first three characters, which are measurement types eg. "Ua=" of 'Ua=88.6P"
-        meas[i].remove(meas[i].length()-1,1); //removes the last character which is the Unit eg. "P" of 'Ua=88.6P'
-      }
-      for(int i = 0; i < MEAS_ARRAY_SIZE-2; i++) { 
-        measFLOAT[i] = meas[i+1].toFloat(); //removes first value of array ("0R0")
-      }
-      //scale temperatures to avoid negative values
-      measFLOAT[6] += 50; //air temp
-      measFLOAT[7] += 50; //air temp internal
-      measFLOAT[9] /= 10; //air pressure (div by 10, or it will roll over when upscaled to an INT)
-      measFLOAT[18] += 50;  //Supply Voltage
-      measFLOAT[20] = getBatteryVoltage(); //battery voltage
-      measFLOAT[20] /= 1000; //battery voltage (scale for CubeCell)
+    for(int i = 0; i < MEAS_ARRAY_SIZE; i++) { //cycles through array
+      meas[i].remove(0,3); //remove first three characters, which are measurement types eg. "Ua=" of 'Ua=88.6P"
+      meas[i].remove(meas[i].length()-1,1); //removes the last character which is the Unit eg. "P" of 'Ua=88.6P'
+    }
+    for(int i = 0; i < MEAS_ARRAY_SIZE-2; i++) { 
+      measFLOAT[i] = meas[i+1].toFloat(); //removes first value of array ("0R0")
+    }
+    //scale temperatures to avoid negative values
+    measFLOAT[6] += 50; //air temp
+    measFLOAT[7] += 50; //air temp internal
+    measFLOAT[9] /= 10; //air pressure (div by 10, or it will roll over when upscaled to an INT)
+    measFLOAT[18] += 50;  //Supply Voltage
+    measFLOAT[20] = getBatteryVoltage(); //battery voltage
+    measFLOAT[20] /= 1000; //battery voltage (scale for CubeCell)
 
-      //converts floats into char pairs
-      for(int i = 0; i < DATA_ARRAY_SIZE; i++) {
-        measINT[i] = measFLOAT[i] * 100; //upscale data and convert floats to ints
-        appData[i*2] = measINT[i] >> 8;  //bit shift into array
-        appData[(i*2)+1] = measINT[i];
-      }
-  //  }
+    //converts floats into char pairs
+    for(int i = 0; i < DATA_ARRAY_SIZE; i++) {
+      measINT[i] = measFLOAT[i] * 100; //upscale data and convert floats to ints
+      appData[i*2] = measINT[i] >> 8;  //bit shift into array
+      appData[(i*2)+1] = measINT[i];
+    }
+  }
+  */
+
+// 0R0,Dm=312D,Sm=0.4M,Ta=9.0C,Ua=88.6P,Pa=1006.9H,Rc=0.00M,Rd=0s,Ri=0.0M,Vs=12.1V
+
+   if(Serial1.available()) {
+    input = Serial1.readStringUntil('\n'); //pulls whole string into variable
+    for(int i = 0; i < MEAS_ARRAY_SIZE; i++) //splits the string at the comma into an array of strings
+      meas[i] = split(input, ',',i);
+    for(int i = 0; i < MEAS_ARRAY_SIZE; i++) { //cycles through array
+      meas[i].remove(0,3); //remove first three characters, which are measurement types eg. "Ua=" of 'Ua=88.6P"
+      meas[i].remove(meas[i].length()-1,1); //removes the last character which is the Unit eg. "P" of 'Ua=88.6P'
+    }
+    for(int i = 0; i < MEAS_ARRAY_SIZE-2; i++) { 
+      measFLOAT[i] = meas[i+1].toFloat(); //removes first value of array ("0R0")
+    }
+    //scale temperatures to avoid negative values
+    measFLOAT[2] += 50; //air temp
+    // measFLOAT[7] += 50; //air temp internal
+    measFLOAT[4] /= 10; //air pressure (div by 10, or it will roll over when upscaled to an INT)
+    measFLOAT[8] += 50;  //Supply Voltage
+    measFLOAT[9] = getBatteryVoltage(); //battery voltage
+    measFLOAT[9] /= 1000; //battery voltage (scale for CubeCell)
+
+    //converts floats into char pairs
+    for(int i = 0; i < DATA_ARRAY_SIZE; i++) {
+      measINT[i] = measFLOAT[i] * 100; //upscale data and convert floats to ints
+      appData[i*2] = measINT[i] >> 8;  //bit shift into array
+      appData[(i*2)+1] = measINT[i];
+    }
   }
 }
 
@@ -210,9 +242,9 @@ void setupSensor()
   // D: Direction Offset (deg)
   // N: Formatter (W, Wind Speed and Angle)
   // F: Samping Frequency (Hz)
-  Serial1.println("0WU,R=&11111100");
+  Serial1.println("0WU,R=&01001000");
   delay(d);
-  Serial1.println("0WU,I=120,A=120,G=3,U=M,D=0");
+  Serial1.println("0WU,I=300,A=300,G=3,U=M,D=0");
   delay(d);
   Serial1.println("0WU,N=W,F=2");
   delay(d);
@@ -221,9 +253,9 @@ void setupSensor()
   // I: Update Interval
   // P: Pressure Unit (H, hPa)
   // T: Temperature Unit (C, Celcius)
-  Serial1.println("0TU,R=&11110000");
+  Serial1.println("0TU,R=&11010000");
   delay(d);
-  Serial1.println("0TU,I=120,P=H,T=C");
+  Serial1.println("0TU,I=300,P=H,T=C");
   delay(d);
   
   //Set Rain/Hail Settings
@@ -232,9 +264,9 @@ void setupSensor()
   // S: Hail Units (M, Metric (accumulated hailfall in hits/cm2, Hail event duration in s, Hail intensity in hits/cm2h))
   // M: AutoSend Mode, (T, Time Based (Sends Precip Message At Interval, I))
   // Z: Counter Reset, (A, Auto; M, Manual; L, Overflow; Y, Immediate)
-  Serial1.println("0RU,R=&11111111");
+  Serial1.println("0RU,R=&11100000");
   delay(d);
-  Serial1.println("0RU,I=120,U=M,S=M,M=T");
+  Serial1.println("0RU,I=300,U=M,S=M,M=T");
   delay(d);
   Serial1.println("0RU,Z=L,X=65535,Y=65535");
   delay(d);
@@ -243,9 +275,9 @@ void setupSensor()
   // I: Update Interval
   // S: Error Messaging (N, No)
   // H: Heating Control (N, No)
-  Serial1.println("0SU,R=&00110000");
+  Serial1.println("0SU,R=&00100000");
   delay(d);
-  Serial1.println("0SU,I=120,S=N,H=N");
+  Serial1.println("0SU,I=300,S=N,H=N");
   delay(d);
   Serial.flush();
   
@@ -253,9 +285,8 @@ void setupSensor()
   /**
    * Example Response:
    * 0R0,Dn=29D,Dm=312D,Dx=323D,Sn=0.3M,Sm=0.4M,Sx=0.4M,Ta=9.0C,Tp=9.1C,Ua=88.6P,Pa=1006.9H,Rc=0.00M,Rd=0s,Ri=0.0M,Hc=0.0M,Hd=0s,Hi=0.0M,Rp=0.0M,Hp=0.0M,Vs=12.1V,Vr=3.534V
+   * 0WU,R=113D,Sm=0.3M,Ta=11.5C,Ua=89.5P,Pa=1003.4H,Rc=0.00M,Rd=0s,Ri=0.0M,Vs=12.1V
    */
-  Serial1.println("0R0");
-  delay(400);
   Serial1.println("0R0");
   delay(40);
   if(Serial1.available()) {
@@ -263,29 +294,29 @@ void setupSensor()
     Serial.println(input);
     for(int i = 0; i < MEAS_ARRAY_SIZE; i++) //splits the string at the comma into an array of strings
       meas[i] = split(input, ',',i);
-//    if(meas[0]=="0R0") { //check for correct return
-      for(int i = 0; i < MEAS_ARRAY_SIZE; i++) { //cycles through array
-        meas[i].remove(0,3); //remove first three characters, which are measurement types eg. "Ua=" of 'Ua=88.6P"
-        meas[i].remove(meas[i].length()-1,1); //removes the last character which is the Unit eg. "P" of 'Ua=88.6P'
-      }
-      for(int i = 0; i < MEAS_ARRAY_SIZE-2; i++) { 
-        measFLOAT[i] = meas[i+1].toFloat(); //removes first value of array ("0R0")
-        Serial.print(i);
-        Serial.print(", ");
-        Serial.println(measFLOAT[i]);
-      }
-      measFLOAT[6] += 50; //air temp
-      measFLOAT[7] += 50; //air temp internal
-      measFLOAT[9] /= 10; //air pressure (div by 10, or it will roll over when upscaled to an INT)
-      measFLOAT[18] += 50;  //Supply Voltage
-      measFLOAT[20] = getBatteryVoltage(); //battery voltage
-      measFLOAT[20] /= 1000; //battery voltage (scale for CubeCell)
-      for(int i = 0; i < DATA_ARRAY_SIZE; i++) {//print scaled values as a check
-        Serial.print(i);
-        Serial.print(", ");
-        Serial.println(measFLOAT[i]);
-      }
+    for(int i = 0; i < MEAS_ARRAY_SIZE; i++) { //cycles through array
+      meas[i].remove(0,3); //remove first three characters, which are measurement types eg. "Ua=" of 'Ua=88.6P"
+      meas[i].remove(meas[i].length()-1,1); //removes the last character which is the Unit eg. "P" of 'Ua=88.6P'
     }
-//  }
+    for(int i = 0; i < MEAS_ARRAY_SIZE-2; i++) { 
+      measFLOAT[i] = meas[i+1].toFloat(); //removes first value of array ("0R0")
+    }
+    //scale temperatures to avoid negative values
+    measFLOAT[2] += 50; //air temp
+    // measFLOAT[7] += 50; //air temp internal
+    measFLOAT[4] /= 10; //air pressure (div by 10, or it will roll over when upscaled to an INT)
+    measFLOAT[8] += 50;  //Supply Voltage
+    measFLOAT[9] = getBatteryVoltage(); //battery voltage
+    measFLOAT[9] /= 1000; //battery voltage (scale for CubeCell)
+    for(int i = 0; i < MEAS_ARRAY_SIZE-2; i++) { 
+      Serial.println(measFLOAT[i]);
+    }
+    //converts floats into char pairs
+    for(int i = 0; i < DATA_ARRAY_SIZE; i++) {
+      measINT[i] = measFLOAT[i] * 100; //upscale data and convert floats to ints
+      appData[i*2] = measINT[i] >> 8;  //bit shift into array
+      appData[(i*2)+1] = measINT[i];
+    }
+  }
   Serial.flush();
 }

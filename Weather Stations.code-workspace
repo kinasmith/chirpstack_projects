@@ -15,6 +15,9 @@
 		{
 			"name": "AB01_si7021_RHT",
 			"path": "AB01_si7021_RHT"
+		},
+		{
+			"path": "Cubecell_Viasala_WeatherStation_TESTER"
 		}
 	],
 	"settings": {}
