@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "RS_weatherStation"
+		},
+		{
+			"path": "../CHIRPSTACK/Rocketscream_test"
+		},
+		{
+			"path": "LMIC-node"
+		}
+	],
+	"settings": {}
+}

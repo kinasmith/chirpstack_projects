@@ -1,0 +1,17 @@
+{
+	"folders": [
+		{
+			"path": "Compost Sensor"
+		},
+		{
+			"path": "RS_weatherStation"
+		},
+		{
+			"path": "../CHIRPSTACK/Rocketscream_test"
+		},
+		{
+			"path": "LMIC-node"
+		}
+	],
+	"settings": {}
+}
