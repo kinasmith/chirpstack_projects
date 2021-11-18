@@ -24,8 +24,6 @@ String split(String, char, int);
 
 RTCZero rtc;
 
-
-
 String input = "";
 String meas[MEAS_ARRAY_SIZE];
 int measINT[MEAS_ARRAY_SIZE];
@@ -152,6 +150,7 @@ void onEvent (ev_t ev) {
       USBDevice.attach();
       // Schedule next transmission to be immediately after this
       os_setTimedCallback(&sendjob, os_getTime() + sec2osticks(1), do_send);
+
       break;
     case EV_LOST_TSYNC:
       SerialUSB.println(F("EV_LOST_TSYNC"));
@@ -415,12 +414,19 @@ void setupSensor() {
   
   //0R0,Dn=270D,Dm=302D,Dx=339D,Sn=0.1M,Sm=0.1M,Sx=0.2M,Ta=19.1C,Tp=19.4C,Ua=31.0P,Pa=837.5H,Rc=0.00M,Rd=0s,Ri=0.0M,Hc=0.0M,Hd=0s,Hi=0.0M,Rp=0.0M,Hp=0.0M,Th=18.8C,Vr=3.533V,Id=Hel␍␊
   delay(100);
+
+  //Set Wind Settings
   Serial.println("0WU,R=11111100&11111100");
   delay(100);
   if(Serial.available()) { input = Serial.readStringUntil('\n'); }
   SerialUSB.println(input);
-  Serial.println("0WU,I=60,A=60,G=3,U=M,D=0,N=M,F=1");
+  Serial.println("0WU,I=60,A=60,G=3,U=M,D=0");
   delay(100);
+  SerialUSB.println(input);
+  Serial.println("0WU,N=W,F=4");
+  delay(100);
+
+  //Set Pressure/Temperature/Humidity Settings
   if(Serial.available()) { input = Serial.readStringUntil('\n'); }
   SerialUSB.println(input);
   Serial.println("0TU,R=11110000&11110000");
@@ -429,14 +435,22 @@ void setupSensor() {
   SerialUSB.println(input);
   Serial.println("0TU,I=60,P=H,T=C");
   delay(100);
+
+  //Set Rain/Hail Settings
   if(Serial.available()) { input = Serial.readStringUntil('\n'); }
   SerialUSB.println(input);
   Serial.println("0RU,R=11111111&11111111");
   delay(100);
   if(Serial.available()) { input = Serial.readStringUntil('\n'); }
   SerialUSB.println(input);
-  Serial.println("0RU,I=60,U=M,S=M,M=T,Z=A,X=65525,Y=65535");
+  Serial.println("0RU,I=60,U=M,S=M,M=T");
   delay(100);
+  if(Serial.available()) { input = Serial.readStringUntil('\n'); }
+  SerialUSB.println(input);
+  Serial.println("0RU,Z=A,X=65535,Y=65535");
+  delay(100);
+
+  //Set System Settings
   if(Serial.available()) { input = Serial.readStringUntil('\n'); }
   SerialUSB.println(input);
   Serial.println("0SU,R=00110000&00110000");
