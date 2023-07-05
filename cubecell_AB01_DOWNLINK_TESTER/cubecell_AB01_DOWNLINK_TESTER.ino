@@ -16,7 +16,7 @@ uint16_t userChannelsMask[6]={ 0xFF00,0x0000,0x0000,0x0000,0x0000,0x0000 }; //fo
 LoRaMacRegion_t loraWanRegion = LORAMAC_REGION_US915;
 DeviceClass_t  loraWanClass = CLASS_C;
 // uint32_t appTxDutyCycle = 60000*1;
-uint32_t appTxDutyCycle = 30000*1;
+uint32_t appTxDutyCycle = 5000*1;
 
 bool overTheAirActivation = true;
 bool loraWanAdr = false;
@@ -37,14 +37,14 @@ int inputArray[4];
 
 //this is an example, but the battery code is real!
 void readSensor() {
-  for (int i = 0; i < 4; i++) {
-    inputArray[i] = digitalRead(readPins[i]);
-  }
-  // Serial.println(inputArray);
-  byte inputHex = byte(inputArray[0] << 3 | inputArray[1] << 2 | inputArray[2] << 1 | inputArray[3]);
-  String inputHexString = String(inputHex, HEX);
-  Serial.println(inputHexString);
-  valveStateEncoded = inputHexString.charAt(0);
+  // for (int i = 0; i < 4; i++) {
+  //   inputArray[i] = digitalRead(readPins[i]);
+  // }
+  // // Serial.println(inputArray);
+  // byte inputHex = byte(inputArray[0] << 3 | inputArray[1] << 2 | inputArray[2] << 1 | inputArray[3]);
+  // String inputHexString = String(inputHex, HEX);
+  // Serial.println(inputHexString);
+  // valveStateEncoded = inputHexString.charAt(0);
 
   b = getBatteryVoltage();
   digitalWrite(GPIO0, LOW);
