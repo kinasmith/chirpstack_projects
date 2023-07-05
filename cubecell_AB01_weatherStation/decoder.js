@@ -18,11 +18,32 @@ function decodeUplink(input) {
   data.HAI_INT = ((input.bytes[30] << 8) + input.bytes[31])/100;
   data.RAI_PEK = ((input.bytes[32] << 8) + input.bytes[33])/100;
   data.HAI_PEK = ((input.bytes[34] << 8) + input.bytes[35])/100;
-  data.SUP_VOL = ((input.bytes[36] << 8) + input.bytes[37])/100 - 50;
+  data.HEA_TEM = ((input.bytes[36] << 8) + input.bytes[37])/100 - 50;
   data.REF_VOL = ((input.bytes[38] << 8) + input.bytes[39])/100;
   data.BAT_VOL = ((input.bytes[40] << 8) + input.bytes[41])/100;
+  var warnings = [];
+  if (data.BAT_VOL < 3.6) {
+    warnings.push("LOW BATTERY");
+  }
   return {
-    data: data //,
-    // warnings: warnings
+    data: data,
+    warnings: warnings
   };
+}
+
+function normalizeUplink(input) {
+  return {
+    data: {
+      air: {
+        temperature: input.data.AIR_TEM
+        relativeHumidity: input.data.AIR_HUM
+        pressure: input.data.AIR_PRS
+      },
+      wind: {
+        speed: input.data.SPD_AVG
+        direction: input.data.DIR_AVG
+      }
+    },
+    warnings: input.warnings
+  }
 }

@@ -41,26 +41,47 @@ RTCZero rtc;
 #define ABP_APPSKEY 0x0A, 0xED, 0xD5, 0x40, 0x0F, 0x21, 0xCF, 0xF9, 0x8B, 0x44, 0xCC, 0xC9, 0xF4, 0x13, 0x8F, 0xA2
 */
 
-// LoRaWAN NwkSKey, network session key
-// This should be in big-endian (aka msb).
-static const PROGMEM u1_t NWKSKEY[16] = { 0xA0, 0xA8, 0x37, 0x54, 0x38, 0x78, 0x6D, 0xAA, 0x05, 0x47, 0x97, 0x13, 0xAB, 0x8F, 0xE2, 0x34 };
+// // LoRaWAN NwkSKey, network session key
+// // This should be in big-endian (aka msb).
+// static const PROGMEM u1_t NWKSKEY[16] = { 0xE3, 0x23, 0x82, 0xE1, 0x7D, 0xFC, 0x93, 0xA4, 0x88, 0xF3, 0xD4, 0x6B, 0x41, 0x4D, 0x9B, 0x96 };
 
-// LoRaWAN AppSKey, application session key
-// This should also be in big-endian (aka msb).
-static const u1_t PROGMEM APPSKEY[16] = { 0x58, 0xBE, 0xD3, 0x74, 0x52, 0x4C, 0x27, 0x14, 0x29, 0xDE, 0x83, 0x1C, 0x75, 0x32, 0x13, 0x42 };
+// // LoRaWAN AppSKey, application session key
+// // This should also be in big-endian (aka msb).
+// static const u1_t PROGMEM APPSKEY[16] = { 0xFD, 0x3E, 0xD5, 0x94, 0x18, 0xA8, 0xFD, 0x40, 0x24, 0x18, 0x81, 0xE0, 0x6B, 0x2E, 0xF5, 0x19 };
 
-// LoRaWAN end-device address (DevAddr)
-// See http://thethingsnetwork.org/wiki/AddressSpace
-// The library converts the address to network byte order as needed, so this should be in big-endian (aka msb) too.
-static const u4_t DEVADDR = 0x00C2706E ; // <-- Change this address for every node!
+// // LoRaWAN end-device address (DevAddr)
+// // See http://thethingsnetwork.org/wiki/AddressSpace
+// // The library converts the address to network byte order as needed, so this should be in big-endian (aka msb) too.
+// static const u4_t DEVADDR = 0x00C2706E ; // <-- Change this address for every node!
 
 // These callbacks are only used in over-the-air activation, so they are
 // left empty here (we cannot leave them out completely unless
 // DISABLE_JOIN is set in arduino-lmic/project_config/lmic_project_config.h,
 // otherwise the linker will complain).
-void os_getArtEui (u1_t* buf) { }
-void os_getDevEui (u1_t* buf) { }
-void os_getDevKey (u1_t* buf) { }
+// void os_getArtEui (u1_t* buf) { }
+// void os_getDevEui (u1_t* buf) { }
+// void os_getDevKey (u1_t* buf) { }
+
+
+// This EUI must be in little-endian format, so least-significant-byte
+// first. When copying an EUI from ttnctl output, this means to reverse
+// the bytes. For TTN issued EUIs the last bytes should be 0xD5, 0xB3,
+// 0x70.
+static const u1_t PROGMEM APPEUI[8]= { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+void os_getArtEui (u1_t* buf) { memcpy_P(buf, APPEUI, 8);}
+
+// This should also be in little endian format, see above.
+static const u1_t PROGMEM DEVEUI[8]= { 0x62, 0xA8, 0x04, 0xD0, 0x7E, 0xD5, 0xB3, 0x70 };
+void os_getDevEui (u1_t* buf) { memcpy_P(buf, DEVEUI, 8);}
+
+// This key should be in big endian format (or, since it is not really a
+// number but a block of memory, endianness does not really apply). In
+// practice, a key taken from the TTN console can be copied as-is.
+static const u1_t PROGMEM APPKEY[16] = { 0x40, 0x0F, 0x24, 0xB8, 0xEB, 0x45, 0x5F, 0xEF, 0x58, 0xFC, 0x7B, 0x42, 0x61, 0x6B, 0xA7, 0x5D };
+void os_getDevKey (u1_t* buf) {  memcpy_P(buf, APPKEY, 16);}
+
+
+
 
 
 static uint8_t data[MAX_DATA_SIZE];
@@ -283,19 +304,19 @@ void setup() {
   LMIC_reset();  // Reset the MAC state. Session and pending data transfers will be discarded.
   // Set static session parameters. Instead of dynamically establishing a session
   // by joining the network, precomputed session parameters are be provided.
-  #ifdef PROGMEM
+  // #ifdef PROGMEM
   // On AVR, these values are stored in flash and only copied to RAM
   // once. Copy them to a temporary buffer here, LMIC_setSession will
   // copy them into a buffer of its own again.
-  uint8_t appskey[sizeof(APPSKEY)];
-  uint8_t nwkskey[sizeof(NWKSKEY)];
-  memcpy_P(appskey, APPSKEY, sizeof(APPSKEY));
-  memcpy_P(nwkskey, NWKSKEY, sizeof(NWKSKEY));
-  LMIC_setSession (0x13, DEVADDR, nwkskey, appskey);
-  #else
+  // uint8_t appskey[sizeof(APPSKEY)];
+  // uint8_t nwkskey[sizeof(NWKSKEY)];
+  // memcpy_P(appskey, APPSKEY, sizeof(APPSKEY));
+  // memcpy_P(nwkskey, NWKSKEY, sizeof(NWKSKEY));
+  // LMIC_setSession (0x13, DEVADDR, nwkskey, appskey);
+  // #else
   // If not running an AVR with PROGMEM, just use the arrays directly
-  LMIC_setSession (0x13, DEVADDR, NWKSKEY, APPSKEY);
-  #endif  
+  // LMIC_setSession (0x13, DEVADDR, NWKSKEY, APPSKEY);
+  // #endif  
   LMIC_selectSubBand(1);
   LMIC.dn2Dr = DR_SF9;
   LMIC_setDrTxpow(DR_SF7,14);

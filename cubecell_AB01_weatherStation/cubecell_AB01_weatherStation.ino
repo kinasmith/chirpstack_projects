@@ -7,10 +7,6 @@
 #define MEAS_ARRAY_SIZE 21
 #define DATA_ARRAY_SIZE 21
 
-// #define MAX_DATA_SIZE 20
-// #define MEAS_ARRAY_SIZE 12
-// #define DATA_ARRAY_SIZE 10
-
 static void prepareTxFrame( uint8_t ) ;
 void setupSensor();
 String split(String, char, int);
@@ -18,26 +14,41 @@ softSerial ss(GPIO1 /*TX pin*/, GPIO2 /*RX pin*/);
 
 
 /* OTAA para*/
-// devEUI, MSB:  0d 14 ea 46 86 20 52 c2
-// App Key, MSB: 22 11 2b 72 e4 e1 7f 6c ad 43 7c 9a 3a 58 43 e2
-// 0d 14 ea 46 86 20 52 c2
-// FD 8B 30 9D C7 39 27 62 3A 06 AB 0A BD A2 A2 F7
+// 0D14EA46862052C2
 uint8_t devEui[] = { 0x0d, 0x14, 0xea, 0x46, 0x86, 0x20, 0x52, 0xc2 };
 uint8_t appEui[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+// FD8B309DC73927623A06AB0ABDA2A2F7
 uint8_t appKey[] = { 0xFD, 0x8B, 0x30, 0x9D, 0xC7, 0x39, 0x27, 0x62, 0x3A, 0x06, 0xAB, 0x0A, 0xBD, 0xA2, 0xA2, 0xF7 };
 /* ABP para*/
 uint8_t nwkSKey[] = { 0x15, 0xb1, 0xd0, 0xef, 0xa4, 0x63, 0xdf, 0xbe, 0x3d, 0x11, 0x18, 0x1e, 0x1e, 0xc7, 0xda,0x85 };
 uint8_t appSKey[] = { 0xd7, 0x2c, 0x78, 0x75, 0x8c, 0xdc, 0xca, 0xbf, 0x55, 0xee, 0x4a, 0x77, 0x8d, 0x16, 0xef,0x67 };
 uint32_t devAddr =  ( uint32_t )0x007e6ae1;
 
+// uint16_t userChannelsMask[6]={ 0xFF00,0x0000,0x0000,0x0000,0x0000,0x0000 };
+// LoRaMacRegion_t loraWanRegion = ACTIVE_REGION;
+// // LoRaMacRegion_t loraWanRegion = LORAMAC_REGION_US915;
+// DeviceClass_t  loraWanClass = LORAWAN_CLASS;
+// // DeviceClass_t  loraWanClass = CLASS_A;
+// uint32_t appTxDutyCycle = 60000*5;
+// bool overTheAirActivation = LORAWAN_NETMODE;
+// // bool overTheAirActivation = true;
+// bool loraWanAdr = LORAWAN_ADR;
+// // bool loraWanAdr = false;
+// bool keepNet = LORAWAN_NET_RESERVE;
+// // bool keepNet = false;
+// bool isTxConfirmed = LORAWAN_UPLINKMODE;
+// // bool isTxConfirmed = false;
+// uint8_t appPort = 2;
+// uint8_t confirmedNbTrials = 4;
+
 uint16_t userChannelsMask[6]={ 0xFF00,0x0000,0x0000,0x0000,0x0000,0x0000 };
-LoRaMacRegion_t loraWanRegion = ACTIVE_REGION;
-DeviceClass_t  loraWanClass = LORAWAN_CLASS;
+LoRaMacRegion_t loraWanRegion = LORAMAC_REGION_US915;
+DeviceClass_t loraWanClass = CLASS_A;
 uint32_t appTxDutyCycle = 60000*5;
-bool overTheAirActivation = LORAWAN_NETMODE;
-bool loraWanAdr = LORAWAN_ADR;
-bool keepNet = LORAWAN_NET_RESERVE;
-bool isTxConfirmed = LORAWAN_UPLINKMODE;
+bool overTheAirActivation = true;
+bool loraWanAdr = false;
+bool keepNet = false;
+bool isTxConfirmed = false;
 uint8_t appPort = 2;
 uint8_t confirmedNbTrials = 4;
 
@@ -112,37 +123,6 @@ static void prepareTxFrame( uint8_t port )
       appData[(i*2)+1] = measINT[i];
     }
   }
-  
-
-// 0R0,Dm=312D,Sm=0.4M,Ta=9.0C,Ua=88.6P,Pa=1006.9H,Rc=0.00M,Rd=0s,Ri=0.0M,Vs=12.1V
-/*
-   if(ss.available()) {
-    input = ss.readStringUntil('\n'); //pulls whole string into variable
-    for(int i = 0; i < MEAS_ARRAY_SIZE; i++) //splits the string at the comma into an array of strings
-      meas[i] = split(input, ',',i);
-    for(int i = 0; i < MEAS_ARRAY_SIZE; i++) { //cycles through array
-      meas[i].remove(0,3); //remove first three characters, which are measurement types eg. "Ua=" of 'Ua=88.6P"
-      meas[i].remove(meas[i].length()-1,1); //removes the last character which is the Unit eg. "P" of 'Ua=88.6P'
-    }
-    for(int i = 0; i < MEAS_ARRAY_SIZE-2; i++) { 
-      measFLOAT[i] = meas[i+1].toFloat(); //removes first value of array ("0R0")
-    }
-    //scale temperatures to avoid negative values
-    measFLOAT[2] += 50; //air temp
-    // measFLOAT[7] += 50; //air temp internal
-    measFLOAT[4] /= 10; //air pressure (div by 10, or it will roll over when upscaled to an INT)
-    measFLOAT[8] += 50;  //Supply Voltage
-    measFLOAT[9] = getBatteryVoltage(); //battery voltage
-    measFLOAT[9] /= 1000; //battery voltage (scale for CubeCell)
-
-    //converts floats into char pairs
-    for(int i = 0; i < DATA_ARRAY_SIZE; i++) {
-      measINT[i] = measFLOAT[i] * 100; //upscale data and convert floats to ints
-      appData[i*2] = measINT[i] >> 8;  //bit shift into array
-      appData[(i*2)+1] = measINT[i];
-    }
-  }
-  */
 }
 
 void setup()
@@ -154,7 +134,6 @@ void setup()
 #if(AT_SUPPORT)
   enableAt();
 #endif
-  // LoRaWAN.displayMcuInit();
   deviceState = DEVICE_STATE_INIT;
   LoRaWAN.ifskipjoin();
   appDataSize = MAX_DATA_SIZE;
@@ -163,42 +142,6 @@ void setup()
 
 void loop()
 {
-  // ss.println("0R0");
-  // delay(40);
-  // if(ss.available()) {
-  //   input = ss.readStringUntil('\n'); //pulls whole string into variable
-  //   Serial.println(input);
-  //   for(int i = 0; i < MEAS_ARRAY_SIZE; i++) //splits the string at the comma into an array of strings
-  //     meas[i] = split(input, ',',i);
-  //   for(int i = 0; i < MEAS_ARRAY_SIZE; i++) { //cycles through array
-  //     meas[i].remove(0,3); //remove first three characters, which are measurement types eg. "Ua=" of 'Ua=88.6P"
-  //     meas[i].remove(meas[i].length()-1,1); //removes the last character which is the Unit eg. "P" of 'Ua=88.6P'
-  //   }
-  //   for(int i = 0; i < MEAS_ARRAY_SIZE-2; i++) { 
-  //     measFLOAT[i] = meas[i+1].toFloat(); //removes first value of array ("0R0")
-  //   }
-  //   //scale temperatures to avoid negative values
-  //   measFLOAT[2] += 50; //air temp
-  //   // measFLOAT[7] += 50; //air temp internal
-  //   measFLOAT[4] /= 10; //air pressure (div by 10, or it will roll over when upscaled to an INT)
-  //   measFLOAT[8] += 50;  //Supply Voltage
-  //   measFLOAT[9] = getBatteryVoltage(); //battery voltage
-  //   measFLOAT[9] /= 1000; //battery voltage (scale for CubeCell)
-  //   for(int i = 0; i < MEAS_ARRAY_SIZE-2; i++) { 
-  //     // Serial.println(measFLOAT[i]);
-  //   }
-  //   //converts floats into char pairs
-  //   for(int i = 0; i < DATA_ARRAY_SIZE; i++) {
-  //     measINT[i] = measFLOAT[i] * 100; //upscale data and convert floats to ints
-  //     appData[i*2] = measINT[i] >> 8;  //bit shift into array
-  //     appData[(i*2)+1] = measINT[i];
-  //   }
-  // }
-  // Serial.flush();
-  // delay(5000);
-
-
-
   switch( deviceState )
   {
     case DEVICE_STATE_INIT:
@@ -240,7 +183,6 @@ void loop()
     }
     case DEVICE_STATE_SLEEP:
     {
-      // LoRaWAN.displayAck();
       LoRaWAN.sleep();
       break;
     }
@@ -404,44 +346,9 @@ void setupSensor()
     Serial.flush();
     ss.flush();
   }
-  // Serial.flush();
-  
-  // Check response to full message
-  /**
+    /**
    * Example Response:
    * 0R0,Dn=29D,Dm=312D,Dx=323D,Sn=0.3M,Sm=0.4M,Sx=0.4M,Ta=9.0C,Tp=9.1C,Ua=88.6P,Pa=1006.9H,Rc=0.00M,Rd=0s,Ri=0.0M,Hc=0.0M,Hd=0s,Hi=0.0M,Rp=0.0M,Hp=0.0M,Vs=12.1V,Vr=3.534V
    * 0WU,R=113D,Sm=0.3M,Ta=11.5C,Ua=89.5P,Pa=1003.4H,Rc=0.00M,Rd=0s,Ri=0.0M,Vs=12.1V
    */
-  // ss.println("0R0");
-  // delay(40);
-  // if(ss.available()) {
-  //   input = ss.readStringUntil('\n'); //pulls whole string into variable
-  //   Serial.println(input);
-  //   for(int i = 0; i < MEAS_ARRAY_SIZE; i++) //splits the string at the comma into an array of strings
-  //     meas[i] = split(input, ',',i);
-  //   for(int i = 0; i < MEAS_ARRAY_SIZE; i++) { //cycles through array
-  //     meas[i].remove(0,3); //remove first three characters, which are measurement types eg. "Ua=" of 'Ua=88.6P"
-  //     meas[i].remove(meas[i].length()-1,1); //removes the last character which is the Unit eg. "P" of 'Ua=88.6P'
-  //   }
-  //   for(int i = 0; i < MEAS_ARRAY_SIZE-2; i++) { 
-  //     measFLOAT[i] = meas[i+1].toFloat(); //removes first value of array ("0R0")
-  //   }
-  //   //scale temperatures to avoid negative values
-  //   measFLOAT[2] += 50; //air temp
-  //   // measFLOAT[7] += 50; //air temp internal
-  //   measFLOAT[4] /= 10; //air pressure (div by 10, or it will roll over when upscaled to an INT)
-  //   measFLOAT[8] += 50;  //Supply Voltage
-  //   measFLOAT[9] = getBatteryVoltage(); //battery voltage
-  //   measFLOAT[9] /= 1000; //battery voltage (scale for CubeCell)
-  //   for(int i = 0; i < MEAS_ARRAY_SIZE-2; i++) { 
-  //     Serial.println(measFLOAT[i]);
-  //   }
-  //   //converts floats into char pairs
-  //   for(int i = 0; i < DATA_ARRAY_SIZE; i++) {
-  //     measINT[i] = measFLOAT[i] * 100; //upscale data and convert floats to ints
-  //     appData[i*2] = measINT[i] >> 8;  //bit shift into array
-  //     appData[(i*2)+1] = measINT[i];
-  //   }
-  // }
-  // Serial.flush();
 }
