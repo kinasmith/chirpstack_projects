@@ -16,7 +16,7 @@ uint16_t userChannelsMask[6]={ 0xFF00,0x0000,0x0000,0x0000,0x0000,0x0000 }; //fo
 LoRaMacRegion_t loraWanRegion = LORAMAC_REGION_US915;
 DeviceClass_t  loraWanClass = CLASS_C;
 // uint32_t appTxDutyCycle = 60000*1;
-uint32_t appTxDutyCycle = 60000*1;
+uint32_t appTxDutyCycle = 30000*1;
 
 bool overTheAirActivation = true;
 bool loraWanAdr = false;
@@ -28,6 +28,7 @@ uint8_t confirmedNbTrials = 4;
 float d;
 uint16_t b;
 char valveStateEncoded;
+uint32_t valvecmd;
 const int ARRAY_SIZE = 4;  // Size of the boolean array
 
 int valvePins[] = {2, 3, 7, 8};
@@ -70,7 +71,9 @@ static void prepareTxFrame( uint8_t port )
   // appData[3] = puc[3];
   appData[0] = (uint8_t)(b >> 8);
   appData[1] = (uint8_t)b;
+  valveStateEncoded = static_cast<byte>(valvecmd); // Convert uint32_t to byte
   appData[2] = valveStateEncoded;
+  // appData[2] = 13;
 }
 
 void hexToBoolArray(unsigned long hexNumber, bool* boolArray, int arraySize) {
@@ -84,9 +87,9 @@ void downLinkDataHandle(McpsIndication_t *mcpsIndication)
 {
   uint32_t down = mcpsIndication->Buffer[0];
   if(mcpsIndication->Port == 1) {
-    unsigned long hexNumber = down;  // Example hexadecimal number
+    // unsigned long hexNumber = down;  // Example hexadecimal number
     bool boolArray[ARRAY_SIZE];
-    hexToBoolArray(hexNumber, boolArray, ARRAY_SIZE);
+    hexToBoolArray(down, boolArray, ARRAY_SIZE);
     Serial.print("port 1, ");
     // Print the boolean array
     for (int i = 0; i < ARRAY_SIZE; i++) {
@@ -94,17 +97,14 @@ void downLinkDataHandle(McpsIndication_t *mcpsIndication)
       Serial.print(" ");
     }
     Serial.println();
+
     //write recieved values to digital pins
     for (int i = 0; i < sizeof(valvePins)/sizeof(valvePins[0]); i++) {
       digitalWrite(valvePins[i], boolArray[i]);
     }
   }
-  if(mcpsIndication->Port == 2) {
-    Serial.print("port 2, ");
-  }
   Serial.println(down);
-  // uint32_t color = mcpsIndication->Buffer[0]<<16|mcpsIndication->Buffer[1]<<8|mcpsIndication->Buffer[2];
-  // uint32_t delay = (mcpsIndication->Buffer[3]) * 10;
+  valvecmd = down;
 }
 
 void setup()
@@ -172,3 +172,40 @@ void loop()
     }
   }
 }
+
+
+/*
+//Payload formatter
+
+function decodeUplink(input) {
+  var data = {};
+  var valveState = (input.bytes[2]);
+  var valveStates = decimalToBinary(valveState);
+  var [valve1, valve2, valve3, valve4] = valveStates;
+  data.valve_state_01 = valve1;
+  data.valve_state_02 = valve2;
+  data.valve_state_03 = valve3;
+  data.valve_state_04 = valve4;
+
+  data.battery = ((input.bytes[0] << 8) + input.bytes[1])/1000.;
+  var warnings = [];
+  if (data.battery < 3.6) {
+    warnings.push("LOW BATTERY");
+  }
+  return {
+    data: data,
+    warnings: warnings
+  };
+}
+
+function decimalToBinary(decimalNumber) {
+  // Convert decimal number to binary string
+  const binaryString = decimalNumber.toString(2);
+  // Split the binary string into an array of characters
+  const binaryArray = binaryString.split('');
+  // Convert each binary digit to a boolean value
+  const booleanVariables = binaryArray.map((digit) => digit === '1');
+  // Return the array of boolean variables
+  return booleanVariables;
+}
+*/
