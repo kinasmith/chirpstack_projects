@@ -16,7 +16,7 @@ uint16_t userChannelsMask[6]={ 0xFF00,0x0000,0x0000,0x0000,0x0000,0x0000 }; //fo
 LoRaMacRegion_t loraWanRegion = LORAMAC_REGION_US915;
 DeviceClass_t  loraWanClass = CLASS_C;
 // uint32_t appTxDutyCycle = 60000*1;
-uint32_t appTxDutyCycle = 5000*1;
+uint32_t appTxDutyCycle = 60000*1;
 
 bool overTheAirActivation = true;
 bool loraWanAdr = false;
