@@ -15,8 +15,8 @@ uint8_t appKey[] = { 0x08, 0xD3, 0x59, 0xCE, 0xEF, 0x92, 0xC5, 0x46, 0xC8, 0x85,
 uint16_t userChannelsMask[6]={ 0xFF00,0x0000,0x0000,0x0000,0x0000,0x0000 }; //for TTN
 LoRaMacRegion_t loraWanRegion = LORAMAC_REGION_US915;
 DeviceClass_t  loraWanClass = CLASS_C;
-// uint32_t appTxDutyCycle = 60000*1;
 uint32_t appTxDutyCycle = 60000*1;
+// uint32_t appTxDutyCycle = 5000*1;
 
 bool overTheAirActivation = true;
 bool loraWanAdr = false;
@@ -31,9 +31,9 @@ char valveStateEncoded;
 uint32_t valvecmd;
 const int ARRAY_SIZE = 4;  // Size of the boolean array
 
-int valvePins[] = {2, 3, 7, 8};
-const int readPins[] = {5, 6, 9, 10};
-int inputArray[4];
+int valvePins[] = { GPIO0, GPIO5, GPIO4, GPIO1 };
+// const int readPins[] = {5, 6, 9, 10};
+// int inputArray[4];
 
 //this is an example, but the battery code is real!
 void readSensor() {
@@ -47,7 +47,6 @@ void readSensor() {
   // valveStateEncoded = inputHexString.charAt(0);
 
   b = getBatteryVoltage();
-  digitalWrite(GPIO0, LOW);
   digitalWrite(Vext, LOW);
   delay(100);
   // d = random(0,1000)/1000.;
@@ -100,7 +99,7 @@ void downLinkDataHandle(McpsIndication_t *mcpsIndication)
 
     //write recieved values to digital pins
     for (int i = 0; i < sizeof(valvePins)/sizeof(valvePins[0]); i++) {
-      digitalWrite(valvePins[i], boolArray[i]);
+      digitalWrite(valvePins[i], !boolArray[i]);
     }
   }
   Serial.println(down);
@@ -119,11 +118,12 @@ void setup()
   //set mode for digital output pins to control valves
   for (int i = 0; i < sizeof(valvePins)/sizeof(valvePins[0]); i++) {
     pinMode(valvePins[i], OUTPUT);
+    digitalWrite(valvePins[i], HIGH);
   }
   //set mode of input pins to read valve state
-  for (int i = 0; i < 4; i++) {
-    pinMode(readPins[i], INPUT);
-  }
+  // for (int i = 0; i < 4; i++) {
+  //   pinMode(readPins[i], INPUT);
+  // }
 }
 
 void loop()
