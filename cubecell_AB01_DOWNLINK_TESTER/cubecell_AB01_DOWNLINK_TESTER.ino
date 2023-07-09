@@ -29,31 +29,24 @@ float d;
 uint16_t b;
 char valveStateEncoded;
 uint32_t valvecmd;
-const int ARRAY_SIZE = 4;  // Size of the boolean array
+bool downlink_array[4] = {false, false, false, false};
+bool pinRead_array[4] = {false, false, false, false};
 
+#define ARRAY_SIZE 4
+// const int ARRAY_SIZE = 4;  // Size of the boolean array
+char hexString[5];
+uint32_t down;
 int valvePins[] = { GPIO0, GPIO5, GPIO4, GPIO1 };
 // const int readPins[] = {5, 6, 9, 10};
 // int inputArray[4];
 
 //this is an example, but the battery code is real!
 void readSensor() {
-  // for (int i = 0; i < 4; i++) {
-  //   inputArray[i] = digitalRead(readPins[i]);
-  // }
-  // // Serial.println(inputArray);
-  // byte inputHex = byte(inputArray[0] << 3 | inputArray[1] << 2 | inputArray[2] << 1 | inputArray[3]);
-  // String inputHexString = String(inputHex, HEX);
-  // Serial.println(inputHexString);
-  // valveStateEncoded = inputHexString.charAt(0);
-
   b = getBatteryVoltage();
   digitalWrite(Vext, LOW);
   delay(100);
-  // d = random(0,1000)/1000.;
-  // Serial.print("Battery: ");
-  // Serial.print(b/1000.);
-  // Serial.print(" Data: ");
-  // Serial.println(d, 2);
+  Serial.print("Battery: ");
+  Serial.println(b/1000.);
   // Vext OFF
   digitalWrite(Vext, HIGH);
 }
@@ -61,18 +54,35 @@ void readSensor() {
 static void prepareTxFrame( uint8_t port )
 {
   readSensor(); 
+
+    int pinValues[ARRAY_SIZE];   // Array to store the pin values
+
+  // Read the pin values and store them in the array
+  for (int i = 0; i < ARRAY_SIZE; i++) {
+    pinValues[i] = digitalRead(valvePins[i]);
+  }
+    // Convert the array into a binary value
+  unsigned int binaryValue = 0;
+  for (int i = 0; i < ARRAY_SIZE; i++) {
+    binaryValue |= (!pinValues[i] << i); //invert values because the output is active LOW
+    pinRead_array[i] = !pinValues[i];
+  }
+    // Convert the binary value into a hexadecimal string
+  char hexString[5];
+  sprintf(hexString, "%04X", binaryValue);
+  Serial.println(hexString[3]);
+
+
+
   appDataSize = 3;
   unsigned char *puc;
   puc = (unsigned char *)(&d);
-  // appData[0] = puc[0];
-  // appData[1] = puc[1];
-  // appData[2] = puc[2];
-  // appData[3] = puc[3];
   appData[0] = (uint8_t)(b >> 8);
   appData[1] = (uint8_t)b;
-  valveStateEncoded = static_cast<byte>(valvecmd); // Convert uint32_t to byte
+  // valveStateEncoded = static_cast<byte>(valvecmd); // Convert uint32_t to byte
+  // appData[2] = valveStateEncoded;
+  byte valveStateEncoded = strtol(hexString, NULL, 16);
   appData[2] = valveStateEncoded;
-  // appData[2] = 13;
 }
 
 void hexToBoolArray(unsigned long hexNumber, bool* boolArray, int arraySize) {
@@ -92,18 +102,20 @@ void downLinkDataHandle(McpsIndication_t *mcpsIndication)
     Serial.print("port 1, ");
     // Print the boolean array
     for (int i = 0; i < ARRAY_SIZE; i++) {
+      downlink_array[i] = boolArray[i];
       Serial.print(boolArray[i]);
       Serial.print(" ");
     }
     Serial.println();
-
     //write recieved values to digital pins
     for (int i = 0; i < sizeof(valvePins)/sizeof(valvePins[0]); i++) {
       digitalWrite(valvePins[i], !boolArray[i]);
     }
   }
   Serial.println(down);
-  valvecmd = down;
+
+  prepareTxFrame( appPort );
+  LoRaWAN.send();
 }
 
 void setup()
@@ -120,10 +132,6 @@ void setup()
     pinMode(valvePins[i], OUTPUT);
     digitalWrite(valvePins[i], HIGH);
   }
-  //set mode of input pins to read valve state
-  // for (int i = 0; i < 4; i++) {
-  //   pinMode(readPins[i], INPUT);
-  // }
 }
 
 void loop()
@@ -148,6 +156,23 @@ void loop()
     case DEVICE_STATE_SEND:
     {
       prepareTxFrame( appPort );
+      // int downlink_int = 0;
+      // int pinRead_int = 0; 
+      // for (int i = 0; i < ARRAY_SIZE; i++) {
+      //   Serial.print(downlink_array[i]);
+      //   Serial.print(" ");
+      //   downlink_int += downlink_array[i];
+      // }
+      // Serial.println();
+      // for (int i = 0; i < ARRAY_SIZE; i++) {
+      //   Serial.print(pinRead_array[i]);
+      //   Serial.print(" ");
+      //   pinRead_int += pinRead_array[i];
+      // }
+      // Serial.println();
+      // Serial.println(downlink_int);
+      // Serial.println(pinRead_int);
+      // if(pinRead_int != downlink_int) 
       LoRaWAN.send();
       deviceState = DEVICE_STATE_CYCLE;
       break;
