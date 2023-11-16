@@ -1,6 +1,9 @@
 #include "LoRaWan_APP.h"
-#include <Wire.h>
-#include <SHT2x.h>
+#include "Wire.h"
+#include "GY21.h"
+
+GY21 rht;
+
 ///* ABP para -- This isn't used, but needs to be included 
 uint8_t nwkSKey[] = { 0x15, 0xb1, 0xd0, 0xef, 0xa4, 0x63, 0xdf, 0xbe, 0x3d, 0x11, 0x18, 0x1e, 0x1e, 0xc7, 0xda,0x85 };
 uint8_t appSKey[] = { 0xd7, 0x2c, 0x78, 0x75, 0x8c, 0xdc, 0xca, 0xbf, 0x55, 0xee, 0x4a, 0x77, 0x8d, 0x16, 0xef,0x67 };
@@ -38,8 +41,8 @@ void setup()
 {
   boardInitMcu();
   Serial.begin(115200);
-  PINMODE_INPUT_PULLUP(GPIO0);
-  attachInterrupt(GPIO0,wmPulse,FALLING);
+  PINMODE_INPUT_PULLDOWN(GPIO5);
+  attachInterrupt(GPIO5,wmPulse,RISING);
 #if(AT_SUPPORT)
   enableAt();
 #endif
@@ -67,8 +70,8 @@ void readRHT()
   delay(50); //wait for sensor to stabalize
   
   Wire.begin();
-  h = SHT2x.GetHumidity();
-  t = SHT2x.GetTemperature();
+  t = rht.GY21_Temperature();
+  h = rht.GY21_Humidity();
   Serial.print("Bat: ");
   Serial.print(b/1000.);
   Serial.print(" Humidity:    ");
